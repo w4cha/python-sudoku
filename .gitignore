@@ -1,0 +1,8 @@
+# ignore changes done to any db file
+*.db
+
+# ignore changes done to input.txt becuase its
+# contents are altered when solver.py or sudoku.py are executed
+input.txt
+
+.pytest_cache

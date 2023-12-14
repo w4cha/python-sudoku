@@ -4,20 +4,9 @@ from sudoku import Solution
 import os
 
 
-def test_invalid_play_input():
-    """ the size parameter is not entered by the user but is stored in the
-        database where games are stored, so is always going to be 4, 9 or 16
-        if the function valid play return an empty list then the play was not valid
-        """
-    invalid_inputs: dict = {"191": 4, "335": 4, "97a": 9, "f76": 9, "gg16": 16,
-                            "4241": 4, "1c1": 4, "c92": 9, ".---78f": 16, "000": 9,
-                            "not valid": 4, "test56\n": 16}
-    for play, size in invalid_inputs.items():
-        assert len(_valid_play(play, size)) == 0
-
-
-def test_valid_play_input():
-    """ the size parameter is not entered by the user but is stored in the
+def test__valid_play():
+    """ test that a valid play is detected:
+    the size parameter is not entered by the user but is stored in the
     database where games are stored, so is always going to be 4, 9 or 16
     if the function valid play returns a not empty list then the play was valid
     """
@@ -27,8 +16,23 @@ def test_valid_play_input():
         assert len(_valid_play(play, size)) != 0
 
 
-def test_saving_already_saved_game():
-    """ trying to save and already solve game should return false meaning that the game was not saved"""
+def test__valid_play_2():
+    """ test that an invalid play is detected:
+    the size parameter is not entered by the user but is stored in the
+    database where games are stored, so is always going to be 4, 9 or 16
+    if the function valid play return an empty list then the play was not valid
+    """
+    invalid_inputs: dict = {"191": 4, "335": 4, "97a": 9, "f76": 9, "gg16": 16,
+                            "4241": 4, "1c1": 4, "c92": 9, ".---78f": 16, "000": 9,
+                            "not valid": 4, "test56\n": 16}
+    for play, size in invalid_inputs.items():
+        assert len(_valid_play(play, size)) == 0
+
+
+def test__save_game():
+    """ test saving an already saved game in the database:
+    trying to save and already solve game should return false meaning that the game was not saved
+    """
     saved_game: tuple = ("INSERT INTO sudokus (start_str, end_str, "
                          "init_vals, difficulty, size) VALUES (?, ?, ?, ?, ?)",
                          ("456379ced4e7|4aa8d3|233f8ga1bbccddg5|263c445e7897ba|3b425f6a8ea6b8e9fg|1c255869b3cb|"
@@ -43,9 +47,12 @@ def test_saving_already_saved_game():
     assert not _save_game(saved_game, db_file, test=True)
 
 
-def test_saving_new_game():
-    """trying to save a not registered game too difficult to be solved, if the function
-    _save_game returns true then the game was saved"""
+def test__save_game_2():
+    """ test saving a new game to the database:
+    trying to save a not registered game too difficult to be solved, if the function
+    _save_game returns true then the game was saved (the optional test argument for
+    the _save_game function if set to True prevents the writing to the database of this test)
+    """
     saved_game: tuple = ("INSERT INTO sudokus (start_str, end_str, "
                          "init_vals, difficulty, size) VALUES (?, ?, ?, ?, ?)",
                          ("49a3g2|5f8c9geag8|2445a9|8abdgf|38gg|65|1a3fgc|6d79a4f7|5g8e|"
@@ -58,8 +65,9 @@ def test_saving_new_game():
     assert _save_game(saved_game, db_file, test=True)
 
 
-def test_game_with_invalid_placements():
-    """ check if sudoku has repeated values inside a row, column or a grid or
+def test__read():
+    """ test the detection of valid sudoku string sequences with invalid initial value positions:
+    check if sudoku has repeated values inside a row, column or a grid or
     if the function _read returns a str (error message) then the game has invalid
     placement in this case
     """
@@ -90,8 +98,9 @@ def test_game_with_invalid_placements():
         assert isinstance(_read(sequence), str)
 
 
-def test_game_with_not_enough_numbers():
-    """ checks that the game has at least certain amount of initial numbers so a game does
+def test__read_2():
+    """ test that the sudoku string sequence has not enough initial values encoded:
+    checks that the game has at least certain amount of initial numbers so a game does
     not have multiple solutions, for a 4 by 4 sudoku you need at least 4 initials values for it
     to not have multiple solution (not a real sudoku), for a 9 by 9 the amount is 17 and for a
     16 by 16 the least amount of initial numbers someone has created a valid sudoku with is 55
@@ -108,33 +117,9 @@ def test_game_with_not_enough_numbers():
         assert isinstance(_read(sequence), str)
 
 
-def test_valid_game_but_no_solution():
-    """ raise error if sudoku has valid initial values but down the line the sudoku turns out to be
-    invalid (the distribution of the initial values cause the sudoku to become unsolvable)
-    only example at the moment: 164372|378499||132246|8897|11|235467|2573|59
-    if the function _solve fails in generating a solution then a str is returned (error message)
-    """
-    assert isinstance(_solve(Solution(size="164372|378499||132246|8897|11|235467|2573|59"), max_time=0.1), str)
-
-
-def test_valid_game_but_to_difficult():
-    """ check that the program stop after an amount of time (minutes) if the sudoku is too difficult and takes
-    too long to solve
-    This is the string representation of a 16 by 16 sudoku with only 55 starting values few enough to make
-    this sudoku unsolvable for this program with the current method since it would end taking too much time
-    (no solution even after more than one hour running the program) and memory usage
-    49a3g2|5f8c9geag8|2445a9|8abdgf|38gg|65|1a3fgc|6d79a4f7|5g8e|2544a7cbd1edf9|43a1d5f4|5a8f|1f3g98bage|
-    6174d2f5|189cbg|697783f1
-    if the _solve function can find a solution in the given time a tuple is returned with the game
-    info otherwise a string is returned with the error message raised by the program
-    """
-    assert isinstance(_solve(Solution(size="49a3g2|5f8c9geag8|2445a9|8abdgf|38gg|65|1a3fgc|6d79a4f7|5g8e|"
-                                           "2544a7cbd1edf9|43a1d5f4|5a8f|1f3g98bage|6174d2f5|189cbg|"
-                                           "697783f1"), max_time=0.1), str)
-
-
-def test_invalid_game_sequences():
-    """ check that the program (_read function) returns an
+def test__read_3():
+    """ test the detection of invalid sudoku string representations:
+    check that the program (_read function) returns an
     error message (a string) if the user enters an invalid game sequence
     representation"""
     invalid_sequences: list = [
@@ -153,9 +138,36 @@ def test_invalid_game_sequences():
         assert isinstance(_read(sequence), str)
 
 
-def test_different_sizes_valid_games():
-    """ test that different sizes sudokus are correctly solved (4, 9, 16 the only supported sizes)
-    if a solution is found then the _solve function returns a tuple with info a bout the game and the solution,
+def test__solve():
+    """ test that a valid sudoku string with no solution is detected:
+    raise error if sudoku has valid initial values but down the line the sudoku turns out to be
+    invalid (the distribution of the initial values cause the sudoku to become unsolvable)
+    only example at the moment: 164372|378499||132246|8897|11|235467|2573|59
+    if the function _solve fails in generating a solution then a str is returned (error message)
+    """
+    assert isinstance(_solve(Solution(size="164372|378499||132246|8897|11|235467|2573|59"), max_time=0.1), str)
+
+
+def test__solve_2():
+    """ test that a valid sudoku string that is too difficult for this program is detected
+    check that the program stop after an amount of time (minutes) if the sudoku is too difficult and takes
+    too long to solve
+    This is the string representation of a 16 by 16 sudoku with only 55 starting values few enough to make
+    this sudoku unsolvable for this program with the current method since it would end taking too much time
+    (no solution even after more than one hour running the program) and memory usage
+    49a3g2|5f8c9geag8|2445a9|8abdgf|38gg|65|1a3fgc|6d79a4f7|5g8e|2544a7cbd1edf9|43a1d5f4|5a8f|1f3g98bage|
+    6174d2f5|189cbg|697783f1
+    if the _solve function can find a solution in the given time a tuple is returned with the game
+    info otherwise a string is returned with the error message raised by the program
+    """
+    assert isinstance(_solve(Solution(size="49a3g2|5f8c9geag8|2445a9|8abdgf|38gg|65|1a3fgc|6d79a4f7|5g8e|"
+                                           "2544a7cbd1edf9|43a1d5f4|5a8f|1f3g98bage|6174d2f5|189cbg|"
+                                           "697783f1"), max_time=0.1), str)
+
+
+def test__solve_3():
+    """ test that different sizes sudokus are correctly solved (4, 9, 16 the only supported sizes):
+    if a solution is found then the _solve function returns a tuple with info about the game and the solution,
     in this case the solution returned is represented by a string
     """
     sudoku_and_solution = {

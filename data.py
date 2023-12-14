@@ -45,7 +45,13 @@ class Database:
                 self.connection.row_factory = sqlite3.Row
             con_obj = self.connection.cursor()
             con_obj.execute(*self.check_query(entries))
-            yield con_obj.fetchall()
+            while True:
+                fetch_rows = con_obj.fetchmany(20)
+                if not fetch_rows:
+                    break
+                else:
+                    for item in fetch_rows:
+                        yield item
         except Error as fail:
             raise DatabaseError(f"the next sqlite3 error was raised: {fail}")
 

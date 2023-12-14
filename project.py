@@ -58,9 +58,8 @@ def _choose_game(choose_value: str, db_path: str) -> int | tuple:
     else:
         new_query = (f"SELECT * FROM sudokus WHERE start_str = ?", [choose_value])
     with Database(db_path=db_path) as read_entry:
-        posible_game = next(read_entry.read_db(entries=new_query, as_row=True), {})
-        if posible_game:
-            return Sudoku(sudoku_size=posible_game[0]["start_str"]), Sudoku(sudoku_size=posible_game[0]["end_str"])
+        for posible_game in read_entry.read_db(entries=new_query, as_row=True):
+            return Sudoku(sudoku_size=posible_game["start_str"]), Sudoku(sudoku_size=posible_game["end_str"])
         return 0
 
 
@@ -216,7 +215,7 @@ def main(db_file=str(Path(fr"{os.path.abspath(os.path.dirname(__file__))}\sudoku
                                              solution[1]["start_vals"], solution[1]["difficulty"], new_game[1].size))
                         if _save_game(new_query, db_file):
                             print("\nnew game added to database, copy the start id or "
-                                  "solution id if you want to play it\n")
+                                  "solution id if you want to play it")
                     else:
                         print(solution)
         elif play_or_solve == "p":
@@ -235,17 +234,26 @@ def main(db_file=str(Path(fr"{os.path.abspath(os.path.dirname(__file__))}\sudoku
                         if all_sizes in ["4", "9", "16", "all", "-4", "-9", "-16"]:
                             while True:
                                 present_game: tuple[Solution, Solution] = _choose_game(all_sizes, db_file)
-                                print("\n" + str(present_game[0]) + "\n")
-                                confirm = input("Choose this sudoku or get another?"
-                                                "\n(y to confirm, n to choose again, "
-                                                "anything else to go back): ").strip().lower()
-                                if confirm == "y":
-                                    _play(present_game)
-                                    break
-                                elif confirm != "n":
-                                    break
+                                if present_game != 0:
+                                    print("\n" + str(present_game[0]) + "\n")
+                                    confirm = input("Choose this sudoku or get another?"
+                                                    "\n(y to confirm, n to choose again, "
+                                                    "anything else to go back): ").strip().lower()
+                                    if confirm == "y":
+                                        _play(present_game)
+                                        break
+                                    elif confirm != "n":
+                                        break
+                                else:
+                                    print("\nno games where found unable to play.")
                         else:
                             break
+                else:
+                    present_game: tuple[Solution, Solution] = _choose_game(random_or_id, db_file)
+                    if present_game != 0:
+                        _play(present_game)
+                    else:
+                        print("\ngame not found try to solve it first if you want to add it to the play list.")
         else:
             sys.exit(0)
 

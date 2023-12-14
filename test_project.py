@@ -1,4 +1,4 @@
-from solver import _valid_play, _solve, _read, _save_game
+from project import _valid_play, _solve, _read, _save_game
 from pathlib import Path
 from sudoku import Solution
 import os

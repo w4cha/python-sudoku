@@ -245,7 +245,7 @@ def main(db_file=str(Path(fr"{os.path.abspath(os.path.dirname(__file__))}\sudoku
                                     elif confirm != "n":
                                         break
                                 else:
-                                    print("\nno games where found unable to play.")
+                                    print("\nno games where found, unable to play.")
                         else:
                             break
                 else:
@@ -253,7 +253,7 @@ def main(db_file=str(Path(fr"{os.path.abspath(os.path.dirname(__file__))}\sudoku
                     if present_game != 0:
                         _play(present_game)
                     else:
-                        print("\ngame not found try to solve it first if you want to add it to the play list.")
+                        print("\ngame not found, try to solve it first if you want to add it to the play list.")
         else:
             sys.exit(0)
 

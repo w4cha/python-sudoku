@@ -163,7 +163,6 @@ def _save_game(query: tuple, database_location: str, test: bool = False) -> bool
     """function _save_game accepts a tuple as an argument and loads the game info into a db file
     checking before if the entry has not being already submitted, so there are not two sudokus
     with the same solution in the database"""
-    # todo change path in future to final directory
     is_present: tuple = ("SELECT end_str FROM sudokus WHERE end_str = ?", [query[1][1]])
     with Database(db_path=database_location) as add_entry:
         if not next(add_entry.read_db(entries=is_present), False):

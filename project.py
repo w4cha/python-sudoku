@@ -97,7 +97,7 @@ def _play(games: tuple[Sudoku, Sudoku]) -> None:
                     board = _add_color(values=right_answers, object_=board)
                     print("\n", board)
                     if not valid_moves:
-                        print("Game solved.\n")
+                        print("Game solved.")
                         return
                 elif new_play[0:-1] in [val[0:-1] for val in valid_moves]:
                     board = _add_color(values=[move], object_=board, right=False)

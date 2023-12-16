@@ -368,7 +368,7 @@ class Solution(Sudoku):
         self.time: None | float = None
         self.iterations: int = 1
         self.max_time: int | float = 10
-        self.max_level: int = 5000
+        self.max_level: int = 30 if self.size == 4 else (5_000 if self.size == 9 else 1_400_000)
 
     def solve(self) -> pd.DataFrame:
         """ public method solve is in charge of taking the current sudoku and search a solution if
@@ -376,7 +376,6 @@ class Solution(Sudoku):
             than the current set max time, or if the sudoku is invalid (seemingly valid sudokus detected
             as such by this program may still be invalid and as such they will raise and error)
             if a solution is found a dataframe containing the solved sudoku is returned"""
-        # todo here a flag to determinate if a game was check for errors may be a necessity
         if self.sudoku is not None:
             if self.verified:
                 self.puzzle = copy.deepcopy(self.sudoku)
@@ -396,7 +395,7 @@ class Solution(Sudoku):
         for possible_value in range(min_value - 1, min_value + 4):
             if possible_value == min_value - 1:
                 is_solved: bool = self.__possibility_compare(self.unknown_values, possible_value,
-                                                             dict_safe=self.alt_unknowns, is_alt=False)
+                                                             gen_safe=self.alt_unknowns, is_alt=False)
             else:
                 is_solved: bool = self.__possibility_compare(self.unknown_values, possible_value, is_alt=False)
             if is_solved and self.__end(self.unknown_values):
@@ -419,7 +418,7 @@ class Solution(Sudoku):
                              "\nbut the sudoku seems to be not.")
         running_time: float = time.time() + 60 * self.max_time
         while True:
-            new_node = tuple(self.__next_node(val, item[0]) for item in new_node for val in item[1:])
+            new_node = tuple(self.__next_node(val) for item in new_node for val in item)
             if "solved" in new_node:
                 break
             new_node = tuple(item for item in new_node if isinstance(item, tuple))
@@ -456,8 +455,8 @@ class Solution(Sudoku):
         return tuple(val for val in found)
 
     def extra_info(self, raw_level: bool = False) -> dict:
-        """ public method extra_info returns as a dict the number of initials values, the solving time
-            and the relative difficulty of the sudoku"""
+        """ public method extra_info returns as a dict the number of initials values (start_vals key),
+            the solving time (solving_time key) and the relative difficulty (difficulty key) of the sudoku"""
         if not raw_level:
             level: float = (self.iterations if self.max_level == 0
                             else self.iterations / self.max_level) * 100
@@ -475,7 +474,7 @@ class Solution(Sudoku):
 
     def stringify(self) -> dict:
         """ public method stringify return as a dict a string representation of the current sudoku, one
-            containing the unsolved state of the sudoku and other with the solved state"""
+            containing the unsolved state of the sudoku (start key) and other with the solved state (end key)"""
         strings_: dict[str, str | None] = {}
         if self.sudoku is not None:
             rows_values = tuple("".join(tuple(self.tr(val) if isinstance(val, int) else val
@@ -599,12 +598,12 @@ class Solution(Sudoku):
         return True
 
     def __possibility_compare(self, game_dict: dict,
-                              option_len: int, dict_safe: list | None = None, is_alt: bool = True) -> bool:
+                              option_len: int, gen_safe: list | None = None, is_alt: bool = True) -> bool:
         """ private method possibility_compare takes all the sudoku cells with an equal number of
             possible values and sort them, then takes one of the cells to test each of its possible values
             to see if any is a valid play, if there are no valid plays that branch dies out"""
-        if dict_safe is not None:
-            dict_safe.clear()
+        if gen_safe is not None:
+            gen_safe.clear()
         len_values: list = [[key, value] for key, value in game_dict.items() if len(value) == option_len + 1]
         len_values.sort(key=lambda child_item: self.__get_info(child_item, game_dict), reverse=True)
         if is_alt:
@@ -615,9 +614,12 @@ class Solution(Sudoku):
                 if self.__alter_child(alt_game, item[0], value):
                     self.__put_values(alt_game, 1)
                 if len(tuple(filter(lambda value: 0 in value, alt_game.values()))) == 0:
-                    if dict_safe is not None and count == 0:
+                    if gen_safe is not None and count == 0:
                         self.iterations += 1
-                        dict_safe.append((item[1][value], item[0], alt_game))
+                        if is_alt:
+                            gen_safe.append(f"{item[1][value]} {item[0]}")
+                        else:
+                            gen_safe.append((f"{item[1][value]} {item[0]}", None))
                     if self.__end(alt_game):
                         if is_alt:
                             self.solution_path.append(f"+{item[1][value]} {item[0]}")
@@ -635,37 +637,41 @@ class Solution(Sudoku):
                                if self._filtro(element[0], key) and option in val})
         return usefulness
 
-    def __next_node(self, next_dict: tuple, previous_path: str = "") -> str | list:
+    def __next_node(self, next_path: tuple):
         """ private method get next_node takes a branch created from the choice of a possible value
-            of a cell and create as many new branches as posible values the selected sudoku cell
-            inside the branch had"""
+                    of a cell and create as many new branches as posible values the selected sudoku cell
+                    inside the branch had"""
         if self.solution_path:
             return "void"
-        if next_dict[2]:
-            min_value = min(tuple(len(options) for options in next_dict[2].values() if len(options) > 0))
-            solution_path = self.__is_valid_game(next_dict, min_value, previous_path)
-            if solution_path == "void":
-                return "void"
-            elif solution_path == "solved":
-                return solution_path
-        else:
-            raise InputError("Couldn't found a solution for your sudoku, initial numbers seem valid "
-                             "\nbut the sudoku seems to be not.")
-        min_value = min(tuple(len(options) for options in next_dict[2].values() if len(options) > 0))
-        next_values = []
-        is_solution = self.__possibility_compare(next_dict[2], min_value - 1, dict_safe=next_values)
-        if is_solution:
-            solution_path += self.solution_path.pop(0)
-            self.solution_path.append(solution_path)
-            return "solved"
-        elif next_values:
-            next_values = (solution_path,) + tuple((val[0], val[1],
-                                                    {key: value for key, value in val[2].items() if len(value) > 0})
-                                                   for val in next_values)
-            return next_values
+        next_gen: list = []
+        for last_place in next_path[1:]:
+            new_path = f"{next_path[0]}+{last_place}" if last_place is not None else next_path[0]
+            self.solution_path.append(new_path)
+            new_dict = self.__testing(return_alt=True)
+            if isinstance(new_dict, dict):
+                min_value = min(tuple(len(options) for options in new_dict.values() if len(options) > 0))
+                new_path = self.__is_valid_game(new_dict, min_value, new_path)
+                if new_path == "solved":
+                    return new_path
+                elif new_path == "void":
+                    continue
+            else:
+                raise InputError("Couldn't found a solution for your sudoku, initial numbers seem valid "
+                                 "\nbut the sudoku seems to be not.")
+            min_value = min(tuple(len(options) for options in new_dict.values() if len(options) > 0))
+            next_values: list = []
+            is_solution = self.__possibility_compare(new_dict, min_value - 1, gen_safe=next_values)
+            if is_solution:
+                new_path += self.solution_path.pop(0)
+                self.solution_path.append(new_path)
+                return "solved"
+            elif next_values:
+                next_gen.append((new_path, *next_values))
+        if next_gen:
+            return tuple(next_gen)
         return "void"
 
-    def __testing(self) -> bool:
+    def __testing(self, return_alt: bool = False) -> bool | dict:
         """ private method testing checks if the chose combination of branches that hte program found
             is a solution for the sudoku"""
         duplicate_dict = copy.deepcopy(self.unknown_values)
@@ -690,21 +696,19 @@ class Solution(Sudoku):
             return True
         self.solution_path.clear()
         self.puzzle = duplicate_game
+        if return_alt:
+            return duplicate_dict
         return False
 
-    def __is_valid_game(self, current_option: tuple | list, min_options: int, last_path: str) -> str:
+    def __is_valid_game(self, current_option: dict, min_options: int, last_path: str) -> str:
         """ private method is_valid_game search for patterns inside the branches to see if they are
             valid games or not"""
-        if last_path:
-            last_path: str = f"{last_path}+{current_option[0]} {current_option[1]}"
-        else:
-            last_path: str = f"{current_option[0]} {current_option[1]}"
         current_dict: dict[str:list] = {key: value for key, value
-                                        in current_option[2].items() if len(value) == min_options}
+                                        in current_option.items() if len(value) == min_options}
         removed: set = set()
         for child in current_dict:
             for child_relation in range(0, 3):
-                related_items: dict[str:list] = {key: value for key, value in current_option[2].items()
+                related_items: dict[str:list] = {key: value for key, value in current_option.items()
                                                  if key[child_relation] == child[child_relation] and value}
                 is_case = list(filter(lambda num: num == current_dict[child], related_items.values()))
                 # filter case 0) {[6, 8], [6, 8], [6, 15], [6, 8, 12]}
@@ -718,7 +722,7 @@ class Solution(Sudoku):
                         for change in remove_conflicts:
                             if len(remove_conflicts[change]) > 1:
                                 removed_vals += "-"
-                                current_option[2][change]: list = remove_conflicts[change]
+                                current_option[change]: list = remove_conflicts[change]
                                 removed_vals += "-".join((f"{val} {change}" for val in is_case[0]))
                         if removed_vals:
                             removed.add(removed_vals)
@@ -726,11 +730,11 @@ class Solution(Sudoku):
                                                         if len(val) == 1}
                     if remove_conflicts:
                         for one_option in remove_conflicts:
-                            current_option[2][one_option]: list = remove_conflicts[one_option]
-                            if not self.__put_values(current_option[2], 1):
+                            current_option[one_option]: list = remove_conflicts[one_option]
+                            if not self.__put_values(current_option, 1):
                                 return "void"
                             else:
-                                if not (tuple(filter(None, current_option[2].values()))):
+                                if not (tuple(filter(None, current_option.values()))):
                                     last_path += f"+{remove_conflicts[one_option][0]} {one_option}"
                                     if removed:
                                         last_path += f"*{''.join(removed)}*"
@@ -738,7 +742,7 @@ class Solution(Sudoku):
                                     return "solved"
                                 else:
                                     last_path += f"+{remove_conflicts[one_option][0]} {one_option}"
-                        related_items = {key: value for key, value in current_option[2].items()
+                        related_items = {key: value for key, value in current_option.items()
                                          if key[child_relation] == child[child_relation] and value}
                 case_options = list(flatten(list(related_items.values())))
                 # filter case 1) {[2,4], [2, 4], [2, 4]} 2) {[2, 4], [2, 4], [1, 3, 5], [3, 5], [1, 4], [1, 5]}
@@ -756,11 +760,11 @@ class Solution(Sudoku):
                             for val in get_unique:
                                 is_case = tuple(key for key, value in related_items.items() if val in value)
                                 if is_case:
-                                    current_option[2][is_case[0]]: list = [val]
-                                    if not self.__put_values(current_option[2], 1):
+                                    current_option[is_case[0]]: list = [val]
+                                    if not self.__put_values(current_option, 1):
                                         return "void"
                                     else:
-                                        if not(tuple(filter(None, current_option[2].values()))):
+                                        if not(tuple(filter(None, current_option.values()))):
                                             last_path += f"+{val} {is_case[0]}"
                                             if removed:
                                                 last_path += f"*{''.join(removed)}*"
@@ -887,9 +891,13 @@ if __name__ == "__main__":
                 if sudoku_game.size > 9:
                     use_letter: str = input("Use letters for numbers over 9? y/n: ").lower().strip()
                     use_letter: bool = True if use_letter == "y" else False
+                    set_time: str = input("Set time limit to minutes (enter a number up to 30): ").strip()
+                    if set_time.isnumeric():
+                        sudoku_game.max_time = 5 if 30 < int(set_time) <= 0 else int(set_time)
+                    else:
+                        sudoku_game.max_time = 5
                     sudoku_game.letters = use_letter
                 was_input_valid = sudoku_game.read()
-                sudoku_game.max_time = 10
                 sudoku_game.solve()
             except (InputError, SudokuError) as fail:
                 print(f"\n{str(fail)}\n")

@@ -84,8 +84,6 @@ def _play(games: tuple[Sudoku, Sudoku]) -> None:
     end_val = set("".join(list(map(Solution.tr, val.values()))) for val in ending_place.initial_numbers())
     valid_moves: list = list(end_val - star_val)
     right_answers: list = []
-    if platform.system() == "Windows":
-        just_fix_windows_console()
     while True:
         new_play = input("next move (000 to quit game): ").strip().lower()
         if new_play != "000":
@@ -177,6 +175,8 @@ def main(db_file=str(Path(fr"{os.path.abspath(os.path.dirname(__file__))}\sudoku
     this program to save and read sudoku games is located and the purpose of the function is
     to serve as a main menu from where the user can solve and play game being by calling all the other functions in
     this file directly or indirectly"""
+    if platform.system() == "Windows":
+        just_fix_windows_console()
     print(f"{Back.LIGHTRED_EX}{Fore.BLACK}Welcome "
           f"to {Fore.LIGHTMAGENTA_EX}S{Fore.BLACK}udoku{Fore.LIGHTMAGENTA_EX}S{Fore.BLACK}olver{Style.RESET_ALL}")
     while True:

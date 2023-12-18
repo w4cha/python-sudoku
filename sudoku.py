@@ -392,7 +392,7 @@ class Solution(Sudoku):
                 self.puzzle: pd.DataFrame = self._with_letters(self.puzzle)
             return self.puzzle
         min_value: int = min(tuple(len(options) for options in self.unknown_values.values() if len(options) > 0))
-        for possible_value in range(min_value - 1, min_value + 4):
+        for possible_value in range(min_value - 1, min_value + self.size//2):
             if possible_value == min_value - 1:
                 is_solved: bool = self.__possibility_compare(self.unknown_values, possible_value,
                                                              gen_safe=self.alt_unknowns, is_alt=False)
@@ -712,7 +712,7 @@ class Solution(Sudoku):
                                                  if key[child_relation] == child[child_relation] and value}
                 is_case = list(filter(lambda num: num == current_dict[child], related_items.values()))
                 # filter case 0) {[6, 8], [6, 8], [6, 15], [6, 8, 12]}
-                # here  the third and forth entries must be 1 and 12 otherwise
+                # here  the third and forth entries must be 15 and 12 otherwise
                 # the 2 first entries would end up with the same values making it invalid
                 if len(is_case) == min_options and len(is_case) != len(related_items):
                     remove_conflicts: dict[str:list] = {key: sorted(list(set(item) - set(is_case[0])))

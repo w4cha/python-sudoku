@@ -427,7 +427,9 @@ class Solution(Sudoku):
                                  "\nbut the sudoku seems to be not.")
             elif time.time() > running_time:
                 raise SudokuError("the program is taking more time to solve the sudoku "
-                                  f"\nthan the current time limit: {self.max_time} minutes")
+                                  f"\nthan the current time limit: {self.max_time} minutes.\n"
+                                  f"game string representation:\n"
+                                  f"{self.stringify()['start'] if self.sudoku is not None else 'not available'}")
         if self.__testing():
             end_time: float = time.process_time()
             self.time = end_time - start_time

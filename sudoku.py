@@ -639,7 +639,7 @@ class Solution(Sudoku):
                                if self._filtro(element[0], key) and option in val})
         return usefulness
 
-    def __next_node(self, next_path: tuple):
+    def __next_node(self, next_path: tuple) -> str | tuple:
         """ private method get next_node takes a branch created from the choice of a possible value
                     of a cell and create as many new branches as posible values the selected sudoku cell
                     inside the branch had"""

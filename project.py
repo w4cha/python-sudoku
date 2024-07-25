@@ -228,7 +228,7 @@ def main(db_file=str(Path(fr"{os.path.abspath(os.path.dirname(__file__))}\sudoku
                         all_sizes = input("\nEnter from what sizes (4, 9 or 16) to choose randomly,\n"
                                           "for all sizes enter all for one sizes enter the numbers,\n"
                                           "to select from all except one size enter minus next to\n"
-                                          "excluded size(eg. -16 to elect randomly from 4 and"
+                                          "excluded size(eg. -16 to select randomly from 4 and"
                                           " 9 only) and to go back enter anything else: ").strip().lower()
                         if all_sizes in ["4", "9", "16", "all", "-4", "-9", "-16"]:
                             while True:

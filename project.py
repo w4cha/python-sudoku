@@ -31,7 +31,7 @@ def _read(game_value: str) -> tuple | str:
         return str(was_valid), read_game
 
 
-def _solve(game_object: Solution, max_time: float = 3) -> tuple | str:
+def _solve(game_object: Solution, max_time: float = 3) -> tuple | SudokuError | InputError:
     game_object.max_time = max_time
     """ function _read accepts a sudoku solution object and a max_time optional parameter as arguments
     (defines the time limit the program has to solve a sudoku before returning a time out error) 
@@ -39,7 +39,7 @@ def _solve(game_object: Solution, max_time: float = 3) -> tuple | str:
     try:
         game_object.solve()
     except (InputError, SudokuError) as error:
-        return str(error)
+        return error
     else:
         return str(game_object), game_object.extra_info(raw_level=True), game_object.stringify()
 
@@ -178,10 +178,11 @@ def main(db_file=str(Path(fr"{os.path.abspath(os.path.dirname(__file__))}\sudoku
     if platform.system() == "Windows":
         just_fix_windows_console()
     print(f"{Back.LIGHTRED_EX}{Fore.BLACK}Welcome "
-          f"to {Fore.LIGHTMAGENTA_EX}S{Fore.BLACK}udoku{Fore.LIGHTMAGENTA_EX}S{Fore.BLACK}olver{Style.RESET_ALL}")
+          f"to {Fore.LIGHTWHITE_EX}S{Fore.BLACK}udoku{Fore.LIGHTWHITE_EX}S{Fore.BLACK}olver{Style.RESET_ALL}")
     while True:
         play_or_solve = input("\nEnter p to play or s to solve, anything else to exit: ").lower().strip()
         if play_or_solve == "s":
+            was_time_out: str | None = None
             while True:
                 game_size_or_sequence = input("\nEnter a valid game size or sequence, "
                                               "n to go back: ").lower().strip()
@@ -198,14 +199,24 @@ def main(db_file=str(Path(fr"{os.path.abspath(os.path.dirname(__file__))}\sudoku
                 if isinstance(new_game, str):
                     print(new_game)
                 else:
-                    print(f"\n{new_game[0]}\n")
-                    solution: tuple = _solve(new_game[1])
+                    print(f"\n{new_game[0]}")
+                    if game_size_or_sequence == was_time_out:
+                        set_time: str | int = input("\nEnter your time (number) from 5 to 30 minutes anything "
+                                                    "else will default the time to 5 minutes: ").strip()
+                        if set_time.isnumeric():
+                            set_time = 5 if 30 < int(set_time) < 5 else int(set_time)
+                        else:
+                            set_time = 5
+                        solution: tuple | InputError | SudokuError = _solve(new_game[1], max_time=set_time)
+                    else:
+                        solution: tuple | InputError | SudokuError = _solve(new_game[1])
+                    was_time_out = None
                     if isinstance(solution, tuple):
                         info_labels: tuple = ("game starting values", "game solving time",
                                               "game difficulty", "game start id", "game solution id")
                         game_info = list(f"{val[0]}: {val[1]}" for val in
                                          zip(info_labels, (solution[1] | solution[2]).values()))
-                        print(f"{solution[0]}\n",
+                        print(f"\n{solution[0]}\n",
                               *game_info,
                               sep="\n")
                         new_query: tuple = ("INSERT INTO sudokus (start_str, end_str, "
@@ -216,7 +227,10 @@ def main(db_file=str(Path(fr"{os.path.abspath(os.path.dirname(__file__))}\sudoku
                             print("\nnew game added to database, copy the start id or "
                                   "solution id if you want to play it")
                     else:
-                        print(solution)
+                        print(f"\n{solution}")
+                        if hasattr(solution, "time") and solution.time:
+                            was_time_out = new_game[1].stringify()["start"]
+                            print("\nif you try to play this game immediately again you can change the time limit")
         elif play_or_solve == "p":
             while True:
                 random_or_id = input("\nEnter r to choose a random game, enter "
@@ -228,7 +242,7 @@ def main(db_file=str(Path(fr"{os.path.abspath(os.path.dirname(__file__))}\sudoku
                         all_sizes = input("\nEnter from what sizes (4, 9 or 16) to choose randomly,\n"
                                           "for all sizes enter all for one sizes enter the numbers,\n"
                                           "to select from all except one size enter minus next to\n"
-                                          "excluded size(eg. -16 to elect randomly from 4 and"
+                                          "excluded size(eg. -16 to select randomly from 4 and"
                                           " 9 only) and to go back enter anything else: ").strip().lower()
                         if all_sizes in ["4", "9", "16", "all", "-4", "-9", "-16"]:
                             while True:

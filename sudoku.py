@@ -427,7 +427,10 @@ class Solution(Sudoku):
                                  "\nbut the sudoku seems to be not.")
             elif time.time() > running_time:
                 raise SudokuError("the program is taking more time to solve the sudoku "
-                                  f"\nthan the current time limit: {self.max_time} minutes")
+                                  f"\nthan the current time limit: {self.max_time} minutes.\n"
+                                  f"game string representation:\n"
+                                  f"{self.stringify()['start'] if self.sudoku is not None else 'not available'}",
+                                  time_error=True)
         if self.__testing():
             end_time: float = time.process_time()
             self.time = end_time - start_time
@@ -637,7 +640,7 @@ class Solution(Sudoku):
                                if self._filtro(element[0], key) and option in val})
         return usefulness
 
-    def __next_node(self, next_path: tuple):
+    def __next_node(self, next_path: tuple) -> str | tuple:
         """ private method get next_node takes a branch created from the choice of a possible value
                     of a cell and create as many new branches as posible values the selected sudoku cell
                     inside the branch had"""
@@ -801,8 +804,9 @@ class SudokuError(Exception):
     """ class SudokuError gets raised if a method it's called before
     doing something before, when a solution for a sudoku cannot be found
     or when a sudoku has taken more time to solve than the set time limit"""
-    def __init__(self, message: str):
+    def __init__(self, message: str, time_error: bool = False):
         self.error = message
+        self.time = time_error
 
     @property
     def error(self) -> str:
@@ -815,6 +819,18 @@ class SudokuError(Exception):
         else:
             raise ValueError("Invalid value for class SudokuError error argument "
                              f"\nexpected a str, got {type(value)} instead.")
+
+    @property
+    def time(self) -> bool:
+        return self._time
+
+    @time.setter
+    def time(self, value: bool) -> None:
+        if isinstance(value, bool):
+            self._time = value
+        else:
+            raise ValueError("Invalid value for class SudokuError time argument "
+                             f"\nexpected a bool, got {type(value)} instead.")
 
     def __str__(self) -> str:
         return self.error
@@ -844,7 +860,7 @@ class InputError(ValueError):
                                  f"\nstrings, got {tuple(type(val) for val in value if not isinstance(val, str))} "
                                  f"instead.")
         else:
-            raise ValueError("Invalid value for class InputError error argument expected a tuple "
+            raise ValueError("Invalid value for class InputError error argument expected a tuple"
                              f"\ngot {type(value)} instead.")
 
     @property
@@ -852,22 +868,24 @@ class InputError(ValueError):
         return self._game
 
     @game.setter
-    def game(self, value) -> None:
-        if isinstance(value, str):
+    def game(self, value: str | None) -> None:
+        if isinstance(value, str) or value is None:
             self._game = value
         else:
-            self._game = None
+            raise ValueError("Invalid value for class InputError game argument"
+                             f"\nexpected a str or None, got {type(value)} instead.")
 
     @property
     def values(self) -> list | None:
         return self._values
 
     @values.setter
-    def values(self, value) -> None:
-        if isinstance(value, list):
+    def values(self, value: list | None) -> None:
+        if isinstance(value, list) or value is None:
             self._values = value
         else:
-            self._values = None
+            raise ValueError("Invalid value for class InputError values argument "
+                             f"\nexpected a list or None, got {type(value)} instead.")
 
     def __str__(self) -> str:
         return "\n".join(self.error)

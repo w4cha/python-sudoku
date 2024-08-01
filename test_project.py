@@ -1,6 +1,6 @@
 from project import _valid_play, _solve, _read, _save_game
 from pathlib import Path
-from sudoku import Solution
+from sudoku import Solution, SudokuError, InputError
 import os
 
 
@@ -145,7 +145,7 @@ def test__solve():
     only example at the moment: 164372|378499||132246|8897|11|235467|2573|59
     if the function _solve fails in generating a solution then a str is returned (error message)
     """
-    assert isinstance(_solve(Solution(size="164372|378499||132246|8897|11|235467|2573|59"), max_time=0.1), str)
+    assert isinstance(_solve(Solution(size="164372|378499||132246|8897|11|235467|2573|59"), max_time=0.1), InputError)
 
 
 def test__solve_2():
@@ -162,7 +162,7 @@ def test__solve_2():
     """
     assert isinstance(_solve(Solution(size="49a3g2|5f8c9geag8|2445a9|8abdgf|38gg|65|1a3fgc|6d79a4f7|5g8e|"
                                            "2544a7cbd1edf9|43a1d5f4|5a8f|1f3g98bage|6174d2f5|189cbg|"
-                                           "697783f1"), max_time=0.1), str)
+                                           "697783f1"), max_time=0.1), SudokuError)
 
 
 def test__solve_3():

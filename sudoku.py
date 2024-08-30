@@ -1,22 +1,23 @@
 """libraries used by this program"""
 
 import pandas as pd
-import os
 import re
 import time
 import platform
 import copy
 import sys
+from os import startfile
 from pathlib import Path
 from more_itertools import flatten, unique_to_each, duplicates_everseen
 from colorama import Fore, Style, just_fix_windows_console
 from math import sqrt, ceil
+from dataclasses import dataclass
 
 
 class Sudoku:
     """ class Sudoku it's responsable for making sure that
     a valid sudoku has been submitted before attempting to solve it"""
-    read_input_from: str = str(Path(fr"{os.path.abspath(os.path.dirname(__file__))}\input.txt"))
+    read_input_from: str = str(Path(fr"{Path(__file__).parent}\input.txt"))
 
     def __init__(self, sudoku_size: int | str | pd.DataFrame = 9, letters: bool = False, sudoku_color: bool = False):
         # set pandas values to allow the display of dataframes in console or as a string
@@ -28,8 +29,8 @@ class Sudoku:
         self.size = sudoku_size
         self.letters = letters
         self.color = sudoku_color
-        self.unknown_values: dict[str: list[int]] = {}
-        self.initial_values: dict[str: list[int]] = {}
+        self.unknown_values: dict[str, list[int]] = {}
+        self.initial_values: dict[str, list[int]] = {}
         self.verified: bool = False
         if self.color and platform.system() == "Windows":
             # allows the display of colored string in a windows console
@@ -40,31 +41,31 @@ class Sudoku:
         return self._color
 
     @color.setter
-    def color(self, value: bool) -> None:
+    def color(self, value) -> None:
         if isinstance(value, bool):
             self._color = value
         else:
             raise InputError("Expected type value for class Sudoku color argument of bool, "
-                             f"\ninstead you set color to an argument of type {type(value)}.")
+                             f"\ninstead you set color to an argument of type {type(value).__name__}.")
 
     @property
     def letters(self) -> bool:
         return self._letters
 
     @letters.setter
-    def letters(self, value: bool) -> None:
+    def letters(self, value) -> None:
         if isinstance(value, bool):
             self._letters = value
         else:
             raise InputError("Expected type value for class Sudoku letters argument of bool, "
-                             f"\ninstead you set color to an argument of type {type(value)}.")
+                             f"\ninstead you set color to an argument of type {type(value).__name__}.")
 
     @property
     def size(self) -> int:
         return self._size
 
     @size.setter
-    def size(self, value: int | str | pd.DataFrame) -> None:
+    def size(self, value) -> None:
         if isinstance(value, int):
             if value in (4, 9, 16):
                 self._size = value
@@ -111,7 +112,7 @@ class Sudoku:
                                      f"(9, 9) or (16, 16), got dataframe of shape {df_shape} instead.")
         else:
             raise InputError("Invalid value for class Sudoku size argument, "
-                             f"\nexpected value of type int, str or dataframe, got value type: {type(value)}.")
+                             f"\nexpected value of type int, str or dataframe, got value type: {type(value).__name__}.")
 
     @classmethod
     def enter_game(cls, sudoku_df: int = 9) -> None:
@@ -121,7 +122,7 @@ class Sudoku:
         class_game = cls(sudoku_df).__create_template()
         with open(Sudoku.read_input_from, "w") as new_game:
             new_game.write(str(class_game))
-        os.startfile(Sudoku.read_input_from, "open")
+        startfile(Sudoku.read_input_from, "open")
 
     def read(self) -> pd.DataFrame:
         """Sudoku class public read method: once a sudoku is in place (txt file from where sudokus are read)
@@ -171,7 +172,7 @@ class Sudoku:
                                  f"{', '.join(fails)}.")
         # minimum number of initial values required for a sudoku to have a unique
         # solution at the time of the writing of this program
-        min_vals: dict[int: int] = {4: 4, 9: 17, 16: 55}
+        min_vals: dict[int, int] = {4: 4, 9: 17, 16: 55}
         if initial_values >= min_vals[self.size]:
             self.__validate_sudoku()
             for entry in self.initial_values:
@@ -200,15 +201,15 @@ class Sudoku:
     def __check_game(self) -> dict | str:
         """ private method check_game scans the current game to check for number
             repetition inside a column row or quadrant and then returns say repetitions if any was found"""
-        error_locations: dict[str:list | set] = {
+        error_locations: dict[str, list | set] = {
             "rows": [], "cols": [],
             "quadrants": [], "total": set()
         }
         for size_category in tuple(self.tr(val) for val in range(1, self.size + 1)):
             for place, pattern in (("rows", 0),
                                    ("cols", 1), ("quadrants", 2)):
-                locations: dict[str:list] = {key: val for key, val in self.initial_values.items()
-                                             if key[pattern] == size_category}
+                locations: dict[str, list] = {key: val for key, val in self.initial_values.items()
+                                              if key[pattern] == size_category}
                 has_repetition: tuple = tuple(duplicates_everseen(locations.values()))
                 if has_repetition:
                     for sub_error in has_repetition:
@@ -225,7 +226,7 @@ class Sudoku:
             that can be access through the InputError class"""
         has_error: dict | str = self.__check_game()
         if isinstance(has_error, dict):
-            error_log: list[dict[str: int | str]] = []
+            error_log: list[dict[str, int | str]] = []
             messages: list = []
             for item in has_error:
                 if item == "rows":
@@ -281,7 +282,7 @@ class Sudoku:
     def tr(value: int | str) -> int | str:
         """ tr static method coverts numeric values from int to str so
             numeric values greater than 10 can be represented as letters if required"""
-        sudoku_key: dict[str: int] = {key: value for key, value in zip("123456789abcdefg", range(1, 17))}
+        sudoku_key: dict[str, int] = {key: value for key, value in zip("123456789abcdefg", range(1, 17))}
         if converted := sudoku_key.get(value, False):
             return converted
         elif converted := {item: key for key, item in sudoku_key.items()}.get(value, False):
@@ -358,6 +359,15 @@ class Sudoku:
 class Solution(Sudoku):
     """class solution it's a child of the Sudoku class and the one in charge
     of finding the sudoku solution"""
+
+    @dataclass(frozen=True)
+    class SudokuSolution:
+        start: str | None
+        end: str | None
+        start_vals: int
+        solving_time: float
+        difficulty: int
+        size: int
 
     def __init__(self, size: int | str | pd.DataFrame = 9, letter: bool = False,
                  color: bool = False):
@@ -505,8 +515,14 @@ class Solution(Sudoku):
             strings_["end"] = None
         return strings_
 
+    def game_stats(self) -> SudokuSolution:
+        kwargs_vals = self.stringify() | self.extra_info(raw_level=True)
+        kwargs_vals["solving_time"] = 0 if self.time is None else round(self.time, 3)
+        kwargs_vals["size"] = self.size
+        return self.SudokuSolution(**kwargs_vals)
+
     @property
-    def max_time(self) -> int:
+    def max_time(self) -> int | float:
         return self._max_time
 
     @max_time.setter
@@ -586,12 +602,12 @@ class Solution(Sudoku):
             was a valid guess"""
         if mode == 0:
             pick: int = game_dict[position][pick]
-            game_dict[position]: list = [pick]
+            game_dict[position] = [pick]
         else:
             if len(game_dict[position]) >= 2:
-                game_dict[position]: list = [pick]
-        new_sequence: dict[str:list] = {location: list_options for location, list_options in game_dict.items()
-                                        if self._filtro(location, position) and pick in list_options}
+                game_dict[position] = [pick]
+        new_sequence: dict[str, list] = {location: list_options for location, list_options in game_dict.items()
+                                         if self._filtro(location, position) and pick in list_options}
         for list_locations in new_sequence:
             if len(new_sequence[list_locations]) > 1 or list_locations == position:
                 game_dict[list_locations].remove(pick)
@@ -636,8 +652,8 @@ class Solution(Sudoku):
             that are present the most in their related cells"""
         usefulness: int = 0
         for option in father_element[element[0]]:
-            usefulness += len({key: val for key, val in father_element.items()
-                               if self._filtro(element[0], key) and option in val})
+            usefulness += sum([1 for key, val in father_element.items()
+                               if option in val and self._filtro(element[0], key)])
         return usefulness
 
     def __next_node(self, next_path: tuple) -> str | tuple:
@@ -675,7 +691,7 @@ class Solution(Sudoku):
         return "void"
 
     def __testing(self, return_alt: bool = False) -> bool | dict:
-        """ private method testing checks if the chose combination of branches that hte program found
+        """ private method testing checks if the chose combination of branches that the program found
             is a solution for the sudoku"""
         duplicate_dict = copy.deepcopy(self.unknown_values)
         was_alter = re.findall(r"\*-([^+*]+)\*", self.solution_path[0])
@@ -706,34 +722,34 @@ class Solution(Sudoku):
     def __is_valid_game(self, current_option: dict, min_options: int, last_path: str) -> str:
         """ private method is_valid_game search for patterns inside the branches to see if they are
             valid games or not"""
-        current_dict: dict[str:list] = {key: value for key, value
-                                        in current_option.items() if len(value) == min_options}
+        current_dict: dict[str, list] = {key: value for key, value
+                                         in current_option.items() if len(value) == min_options}
         removed: set = set()
         for child in current_dict:
             for child_relation in range(0, 3):
-                related_items: dict[str:list] = {key: value for key, value in current_option.items()
-                                                 if key[child_relation] == child[child_relation] and value}
+                related_items: dict[str, list] = {key: value for key, value in current_option.items()
+                                                  if key[child_relation] == child[child_relation] and value}
                 is_case = list(filter(lambda num: num == current_dict[child], related_items.values()))
                 # filter case 0) {[6, 8], [6, 8], [6, 15], [6, 8, 12]}
                 # here  the third and forth entries must be 15 and 12 otherwise
                 # the 2 first entries would end up with the same values making it invalid
                 if len(is_case) == min_options and len(is_case) != len(related_items):
-                    remove_conflicts: dict[str:list] = {key: sorted(list(set(item) - set(is_case[0])))
-                                                        for key, item in related_items.items() if item != is_case[0]}
+                    remove_conflicts: dict[str, list] = {key: sorted(list(set(item) - set(is_case[0])))
+                                                         for key, item in related_items.items() if item != is_case[0]}
                     if remove_conflicts:
                         removed_vals = ""
                         for change in remove_conflicts:
                             if len(remove_conflicts[change]) > 1:
                                 removed_vals += "-"
-                                current_option[change]: list = remove_conflicts[change]
+                                current_option[change] = remove_conflicts[change]
                                 removed_vals += "-".join((f"{val} {change}" for val in is_case[0]))
                         if removed_vals:
                             removed.add(removed_vals)
-                    remove_conflicts: dict[str:list] = {key: val for key, val in remove_conflicts.items()
-                                                        if len(val) == 1}
+                    remove_conflicts: dict[str, list] = {key: val for key, val in remove_conflicts.items()
+                                                         if len(val) == 1}
                     if remove_conflicts:
                         for one_option in remove_conflicts:
-                            current_option[one_option]: list = remove_conflicts[one_option]
+                            current_option[one_option] = remove_conflicts[one_option]
                             if not self.__put_values(current_option, 1):
                                 return "void"
                             else:
@@ -763,7 +779,7 @@ class Solution(Sudoku):
                             for val in get_unique:
                                 is_case = tuple(key for key, value in related_items.items() if val in value)
                                 if is_case:
-                                    current_option[is_case[0]]: list = [val]
+                                    current_option[is_case[0]] = [val]
                                     if not self.__put_values(current_option, 1):
                                         return "void"
                                     else:
@@ -783,7 +799,7 @@ class Solution(Sudoku):
         return last_path
 
     @staticmethod
-    def __end(dict_game: dict[str: list]) -> bool:
+    def __end(dict_game: dict[str, list]) -> bool:
         """ static private method end checks if the game has been solved"""
         return True if len(tuple(position for position in dict_game.values() if len(position) > 0)) == 0 else False
 
@@ -818,19 +834,19 @@ class SudokuError(Exception):
             self._error = value
         else:
             raise ValueError("Invalid value for class SudokuError error argument "
-                             f"\nexpected a str, got {type(value)} instead.")
+                             f"\nexpected a str, got {type(value).__name__} instead.")
 
     @property
     def time(self) -> bool:
         return self._time
 
     @time.setter
-    def time(self, value: bool) -> None:
+    def time(self, value) -> None:
         if isinstance(value, bool):
             self._time = value
         else:
             raise ValueError("Invalid value for class SudokuError time argument "
-                             f"\nexpected a bool, got {type(value)} instead.")
+                             f"\nexpected a bool, got {type(value).__name__} instead.")
 
     def __str__(self) -> str:
         return self.error
@@ -857,35 +873,36 @@ class InputError(ValueError):
                 self._error = value
             else:
                 raise ValueError("Invalid contents for class InputError error argument expected a tuple with only"
-                                 f"\nstrings, got {tuple(type(val) for val in value if not isinstance(val, str))} "
+                                 f"\nstrings, got "
+                                 f"{tuple(type(val).__name__ for val in value if not isinstance(val, str))} "
                                  f"instead.")
         else:
             raise ValueError("Invalid value for class InputError error argument expected a tuple"
-                             f"\ngot {type(value)} instead.")
+                             f"\ngot {type(value).__name__} instead.")
 
     @property
     def game(self) -> str | None:
         return self._game
 
     @game.setter
-    def game(self, value: str | None) -> None:
+    def game(self, value) -> None:
         if isinstance(value, str) or value is None:
             self._game = value
         else:
             raise ValueError("Invalid value for class InputError game argument"
-                             f"\nexpected a str or None, got {type(value)} instead.")
+                             f"\nexpected a str or None, got {type(value).__name__} instead.")
 
     @property
     def values(self) -> list | None:
         return self._values
 
     @values.setter
-    def values(self, value: list | None) -> None:
+    def values(self, value) -> None:
         if isinstance(value, list) or value is None:
             self._values = value
         else:
             raise ValueError("Invalid value for class InputError values argument "
-                             f"\nexpected a list or None, got {type(value)} instead.")
+                             f"\nexpected a list or None, got {type(value).__name__} instead.")
 
     def __str__(self) -> str:
         return "\n".join(self.error)
